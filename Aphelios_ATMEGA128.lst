@@ -1,0 +1,927 @@
+NOTE: Code bytes are displayed in order matching the disassembly format in AVR documentation.
+  For example, 'CALL 2B16' (example only, only labels should normally be used) is displayed as
+  0x940E2B16 rather than in little endian byte order.
+
+Interrupt Vectors
+
+Program Code (text area)
+_LCD_delay:
+  ms                   --> R10
+    00095 92AA      ST	-Y,R10
+    00096 2EA0      MOV	R10,R16
+FILE: C:\20171410\Aphelios_ATMEGA128\lcd.c
+(0001) #include "lcd.h"
+(0002) 
+(0003) // LCD 시간 지연 함수입니다. 명렁을 IR레지스터에 쓰고나면 40us 또는 1.64ms를 기다린 후에 다음 명령을 쑬수있습니다.
+(0004) // 또한 CGRAM 또는 DDRAM에 데이터를 쓰고 나면 40us를 기다린 후에 다음 명령을 쓸 수 있습니다.
+(0005) void LCD_delay(BYTE ms)
+(0006) {
+(0007)     delay_ms(ms);
+    00097 2D0A      MOV	R16,R10
+    00098 2711      CLR	R17
+    00099 940E 030C CALL	_delay_ms
+    0009B 90A9      LD	R10,Y+
+    0009C 9508      RET
+(0008) }
+(0009) 
+(0010) //연결된 포트 A와 G의 포트를 기본적으로 출력을 세팅해주는 함수입니다
+(0011) void PortInit(void)
+(0012) {
+(0013)     DDRA = 0xFF; //PORTA를 출력으로 설정합니다.  LCD의 데이터 전송핀을 A에 연결합니다.
+_PortInit:
+    0009D EF8F      LDI	R24,0xFF
+    0009E BB8A      OUT	0x1A,R24
+(0014)     DDRG = 0x0F; // PORTG의 하위 4비트를 출력으로 설정합니다
+    0009F E08F      LDI	R24,0xF
+    000A0 9380 0064 STS	0x64,R24
+    000A2 9508      RET
+(0015) }
+_LCD_Shift:
+  p                    --> R20
+    000A3 934A      ST	-Y,R20
+    000A4 2F40      MOV	R20,R16
+(0016) 
+(0017) void LCD_Shift(char p) //LCD의 화면을 이동해주는 함수입니다 여기서 P는 오른쪽 왼쪽의 여부입니다.
+(0018) {
+(0019)     if (p == RIGHT) //명령어가 오른쪽으로 이동하라고 하면은
+    000A5 3041      CPI	R20,1
+    000A6 F429      BNE	0x00AC
+(0020)     {
+(0021)         LCD_Comm(0x1C); // 0b0001 1100  즉 화면 DB3 DB2는 S/C=1은 화면을 이동한다는 뜻이고 R/L은 우로 시프트한다는 뜻입니다.
+    000A7 E10C      LDI	R16,0x1C
+    000A8 D02C      RCALL	_LCD_Comm
+(0022)         LCD_delay(1);   //지연은 40us 정도 걸립니다.
+    000A9 E001      LDI	R16,1
+    000AA DFEA      RCALL	_LCD_delay
+(0023)     }
+    000AB C006      RJMP	0x00B2
+(0024)     else if (p == LEFT) //명령어가 왼쪽으로 이동하라고 하면은
+    000AC 2344      TST	R20
+    000AD F421      BNE	0x00B2
+(0025)     {
+(0026)         LCD_Comm(0x18); // ob 0001 1000 S/C=1은 화면을 이동하고 R/L이0인 경우는 좌로 시프트한다는 뜻입니다.
+    000AE E108      LDI	R16,0x18
+    000AF D025      RCALL	_LCD_Comm
+(0027)         LCD_delay(1);
+    000B0 E001      LDI	R16,1
+    000B1 DFE3      RCALL	_LCD_delay
+    000B2 9149      LD	R20,Y+
+    000B3 9508      RET
+(0028)     }
+(0029) }
+_LCD_Data:
+  ch                   --> R10
+    000B4 92AA      ST	-Y,R10
+    000B5 2EA0      MOV	R10,R16
+(0030) 
+(0031) void LCD_Data(BYTE ch) //데이터 레지스터에 데이터를 쓰는 함수입니다.
+(0032) {
+(0033)     LCD_CTRL |= (1 << LCD_RS);
+    000B6 9180 0065 LDS	R24,0x65
+    000B8 6084      ORI	R24,4
+    000B9 9380 0065 STS	0x65,R24
+(0034)     LCD_CTRL &= ~(1 << LCD_RW);
+    000BB 9180 0065 LDS	R24,0x65
+    000BD 7F8D      ANDI	R24,0xFD
+    000BE 9380 0065 STS	0x65,R24
+(0035)     LCD_CTRL |= (1 << LCD_EN);
+    000C0 9180 0065 LDS	R24,0x65
+    000C2 6081      ORI	R24,1
+    000C3 9380 0065 STS	0x65,R24
+(0036)     //여기서는 RS=1 RW=0으로 하여 dr을 선택하여 데이터 값을 쓰기 모드를 설정해줍니다.
+(0037)     delay_us(50);
+    000C5 E302      LDI	R16,0x32
+    000C6 E010      LDI	R17,0
+    000C7 940E 0323 CALL	_delay_us
+(0038)     LCD_WDATA = ch; //포트 A에 ch입력값을 넣어줍니다. 즉 데이터를 출력합니다.
+    000C9 BAAB      OUT	0x1B,R10
+(0039)     delay_us(50);
+    000CA E302      LDI	R16,0x32
+    000CB E010      LDI	R17,0
+    000CC 940E 0323 CALL	_delay_us
+(0040)     LCD_CTRL &= ~(1 << LCD_EN); //PORTG에다가 LCD Disable 기능을 설정해줍니다.
+    000CE 9180 0065 LDS	R24,0x65
+    000D0 7F8E      ANDI	R24,0xFE
+    000D1 9380 0065 STS	0x65,R24
+    000D3 90A9      LD	R10,Y+
+    000D4 9508      RET
+(0041) }
+_LCD_Comm:
+  ch                   --> R10
+    000D5 92AA      ST	-Y,R10
+    000D6 2EA0      MOV	R10,R16
+(0042) 
+(0043) void LCD_Comm(BYTE ch) // 명령 레지스터에 명령어 쓰기 함수입니다.
+(0044) {
+(0045)     LCD_CTRL &= ~(1 << LCD_RS);
+    000D7 9180 0065 LDS	R24,0x65
+    000D9 7F8B      ANDI	R24,0xFB
+    000DA 9380 0065 STS	0x65,R24
+(0046)     LCD_CTRL &= ~(1 << LCD_RW);
+    000DC 9180 0065 LDS	R24,0x65
+    000DE 7F8D      ANDI	R24,0xFD
+    000DF 9380 0065 STS	0x65,R24
+(0047)     LCD_CTRL |= (1 << LCD_EN);
+    000E1 9180 0065 LDS	R24,0x65
+    000E3 6081      ORI	R24,1
+    000E4 9380 0065 STS	0x65,R24
+(0048)     // 여기서는 RS=0 R/W=0으로 설정해줍니다 이 기능은 IR을 선택하여 제어 명령쓰기 입니다. 예시로는 디스플레이 클리어가 있습니다.
+(0049)     delay_us(50);
+    000E6 E302      LDI	R16,0x32
+    000E7 E010      LDI	R17,0
+    000E8 940E 0323 CALL	_delay_us
+(0050)     LCD_WINST = ch; //PORTA 에다가 ch값을 넣어줍니다. 즉 명령어를 적습니다.
+    000EA BAAB      OUT	0x1B,R10
+(0051)     delay_us(50);
+    000EB E302      LDI	R16,0x32
+    000EC E010      LDI	R17,0
+    000ED 940E 0323 CALL	_delay_us
+(0052)     LCD_CTRL &= ~(1 << LCD_EN); //Disable 모드로 바꿔줍니다.
+    000EF 9180 0065 LDS	R24,0x65
+    000F1 7F8E      ANDI	R24,0xFE
+    000F2 9380 0065 STS	0x65,R24
+    000F4 90A9      LD	R10,Y+
+    000F5 9508      RET
+(0053) }
+_LCD_CHAR:
+  c                    --> R10
+    000F6 92AA      ST	-Y,R10
+    000F7 2EA0      MOV	R10,R16
+(0054) 
+(0055) void LCD_CHAR(BYTE c) //한 문자를 출력하는 함수입니다.
+(0056) {
+(0057)     LCD_Data(c); //DDRAM으로 데이터를 전달하는 명령어입니다.
+    000F8 2D0A      MOV	R16,R10
+    000F9 DFBA      RCALL	_LCD_Data
+(0058)     delay_ms(1);
+    000FA E001      LDI	R16,1
+    000FB E010      LDI	R17,0
+    000FC 940E 030C CALL	_delay_ms
+    000FE 90A9      LD	R10,Y+
+    000FF 9508      RET
+(0059) }
+_LCD_STR:
+  str                  --> R20
+    00100 934A      ST	-Y,R20
+    00101 935A      ST	-Y,R21
+    00102 01A8      MOVW	R20,R16
+(0060) 
+(0061) void LCD_STR(BYTE *str) //str 포인터를 통해서 문자열을 받고 이 포인터가 가리키는 문자열을 문자열이 끝날 떄 까지 출력하는 함수입니다.
+(0062) {
+    00103 C005      RJMP	0x0109
+(0063)     while (*str != 0)
+(0064)     {
+(0065)         LCD_CHAR(*str);
+    00104 01FA      MOVW	R30,R20
+    00105 8100      LD	R16,Z
+    00106 DFEF      RCALL	_LCD_CHAR
+(0066)         str++;
+    00107 5F4F      SUBI	R20,0xFF
+    00108 4F5F      SBCI	R21,0xFF
+    00109 01FA      MOVW	R30,R20
+    0010A 8020      LD	R2,Z
+    0010B 2022      TST	R2
+    0010C F7B9      BNE	0x0104
+    0010D 9159      LD	R21,Y+
+    0010E 9149      LD	R20,Y+
+    0010F 9508      RET
+(0067)     }
+(0068) }
+_LCD_pos:
+  col                  --> R10
+  row                  --> R12
+    00110 92AA      ST	-Y,R10
+    00111 92CA      ST	-Y,R12
+    00112 2EA2      MOV	R10,R18
+    00113 2EC0      MOV	R12,R16
+(0069) 
+(0070) void LCD_pos(unsigned char row, unsigned char col) //LCD 포지션 설정하는 함수입니다.
+(0071) {
+(0072)     LCD_Comm(0x80 | (row * 0x40 + col)); //row : 행 가로줄 col은 열 세로줄입니다.
+    00114 2D2C      MOV	R18,R12
+    00115 2733      CLR	R19
+    00116 E400      LDI	R16,0x40
+    00117 E010      LDI	R17,0
+    00118 940E 033A CALL	<LIBRARY>|empy16s
+    0011A 0D0A      ADD	R16,R10
+    0011B 6800      ORI	R16,0x80
+    0011C DFB8      RCALL	_LCD_Comm
+    0011D 90C9      LD	R12,Y+
+    0011E 90A9      LD	R10,Y+
+    0011F 9508      RET
+(0073) }
+(0074) 
+(0075) void LCD_Clear(void) // 화면을 클리어 하는 함수입니다.
+(0076) {
+(0077)     LCD_Comm(0x01);
+_LCD_Clear:
+    00120 E001      LDI	R16,1
+    00121 DFB3      RCALL	_LCD_Comm
+(0078)     LCD_delay(2);
+    00122 E002      LDI	R16,2
+    00123 CF71      RJMP	_LCD_delay
+(0079) }
+(0080) 
+(0081) void LCD_Init(void) //LCD의 초기화 상태를 사용하는 것입니다.
+(0082) {
+(0083)     LCD_Comm(0x38); // DDRAM, 데이터 8비트사용, LCD 2열로 사용 (6)
+_LCD_Init:
+    00124 E308      LDI	R16,0x38
+    00125 DFAF      RCALL	_LCD_Comm
+(0084)     LCD_delay(2);   // 2ms 지연
+    00126 E002      LDI	R16,2
+    00127 DF6D      RCALL	_LCD_delay
+(0085)     LCD_Comm(0x38); // DDRAM, 데이터 8비트사용, LCD 2열로 사용 (6)
+    00128 E308      LDI	R16,0x38
+    00129 DFAB      RCALL	_LCD_Comm
+(0086)     LCD_delay(2);   // 2ms 지연
+    0012A E002      LDI	R16,2
+    0012B DF69      RCALL	_LCD_delay
+(0087)     LCD_Comm(0x38); // DDRAM, 데이터 8비트사용, LCD 2열로 사용 (6)
+    0012C E308      LDI	R16,0x38
+    0012D DFA7      RCALL	_LCD_Comm
+(0088)     LCD_delay(2);   // 2ms 지연
+    0012E E002      LDI	R16,2
+    0012F DF65      RCALL	_LCD_delay
+(0089)     //여기서 설정된 값(0x38)을 IR 레지스터에 연속하여 3회정도 쓰고 명령을 쓰는 과정에서 명령어가 처리 되는 시간을 지연함수를 사용하여 기다립니다.
+(0090)     LCD_Comm(0x0e); // Display ON/OFF
+    00130 E00E      LDI	R16,0xE
+    00131 DFA3      RCALL	_LCD_Comm
+(0091)     LCD_delay(2);   // 2ms 지연 여기서는 1.64ms 이상을 기다린다는 뜻입니다.
+    00132 E002      LDI	R16,2
+    00133 DF61      RCALL	_LCD_delay
+(0092)     LCD_Comm(0x06); // 주소+1 , 커서를 우측 이동 (3)  entry mode set이라는 뜻입니다.
+    00134 E006      LDI	R16,6
+    00135 DF9F      RCALL	_LCD_Comm
+(0093)     LCD_delay(2);   // 2ms 지연
+    00136 E002      LDI	R16,2
+    00137 DF5D      RCALL	_LCD_delay
+    00138 CFE7      RJMP	_LCD_Clear
+(0094)     LCD_Clear();    // LCD 화면 클리어
+(0095) }
+(0096) 
+(0097) void Cursor_Home(void) // Cursor를 (0,0)의 위치로 이동하는 함수입니다.
+(0098) {
+(0099)     LCD_Comm(0x02); // 0b 0000 0010 커서를 홈 위치로 돌아가게 한다는 뜻입니다.
+_Cursor_Home:
+    00139 E002      LDI	R16,2
+    0013A DF9A      RCALL	_LCD_Comm
+(0100)     LCD_delay(2);   // 커서홈의 기능의 실행시간은 1.64ms입니다.
+    0013B E002      LDI	R16,2
+    0013C CF58      RJMP	_LCD_delay
+(0101) }
+_Cursor_shift:
+  p                    --> R20
+    0013D 934A      ST	-Y,R20
+    0013E 2F40      MOV	R20,R16
+(0102) 
+(0103) void Cursor_shift(BYTE p)
+(0104) {
+(0105)     if (p == RIGHT)
+    0013F 3041      CPI	R20,1
+    00140 F429      BNE	0x0146
+(0106)     {
+(0107)         LCD_Comm(0x14); //ob 0001 0100 S/C는 0 즉 커서 이동을 선언하고 R/L에서는 RIGHT로 이동을 선언합니다
+    00141 E104      LDI	R16,0x14
+    00142 DF92      RCALL	_LCD_Comm
+(0108)         LCD_delay(1);
+    00143 E001      LDI	R16,1
+    00144 DF50      RCALL	_LCD_delay
+(0109)     }
+    00145 C006      RJMP	0x014C
+(0110)     else if (p == LEFT)
+    00146 2344      TST	R20
+    00147 F421      BNE	0x014C
+(0111)     {
+(0112)         LCD_Comm(0x10); //ob 0001 0000 S/C=0 커서이동을 선언하고 R/L에서는 Left로 이동을 선언합니다.
+    00148 E100      LDI	R16,0x10
+    00149 DF8B      RCALL	_LCD_Comm
+(0113)         LCD_delay(1);
+    0014A E001      LDI	R16,1
+    0014B DF49      RCALL	_LCD_delay
+    0014C 9149      LD	R20,Y+
+    0014D 9508      RET
+(0114)     }
+(0115) }
+(0116) 
+(0117) // 화면 ON/OFF 제어 기능입니다.
+(0118) void LCD_OnOFF(void)
+(0119) {
+(0120)     LCD_Comm(0x0e); //모든 기능을 on 합니다.
+_LCD_OnOFF:
+    0014E E00E      LDI	R16,0xE
+    0014F DF85      RCALL	_LCD_Comm
+(0121)     LCD_delay(2);   //2ms를 지연시킵니다
+    00150 E002      LDI	R16,2
+    00151 CF43      RJMP	_LCD_delay
+(0122) }
+(0123) 
+(0124) //엔트리 모드 세트 기능을 하는 함수입니다.
+(0125) void Init_Lcd(void)
+(0126) {
+(0127)     DDRA = 0xFF;    //DDRA를 출력으로 지정합니다.
+_Init_Lcd:
+    00152 EF8F      LDI	R24,0xFF
+    00153 BB8A      OUT	0x1A,R24
+(0128)     DDRG = 0x0F;    //PORTG의 하위비트 4비트를 출력으로 지정합니다
+    00154 E08F      LDI	R24,0xF
+    00155 9380 0064 STS	0x64,R24
+(0129)     LCD_Comm(0x38); //lcd 모드 를 2라인의 5x8로 지정을 합니다
+    00157 E308      LDI	R16,0x38
+    00158 DF7C      RCALL	_LCD_Comm
+(0130)     LCD_delay(2);   // 2ms 딜레이를 걸어줍니다.
+    00159 E002      LDI	R16,2
+    0015A DF3A      RCALL	_LCD_delay
+(0131)     LCD_Comm(0x38); //lcd 모드 를 2라인의 5x8로 지정을 합니다
+    0015B E308      LDI	R16,0x38
+    0015C DF78      RCALL	_LCD_Comm
+(0132)     LCD_delay(2);   // 2ms 딜레이를 걸어줍니다.
+    0015D E002      LDI	R16,2
+    0015E DF36      RCALL	_LCD_delay
+(0133)     LCD_Comm(0x38); //lcd 모드 를 2라인의 5x8로 지정을 합니다
+    0015F E308      LDI	R16,0x38
+    00160 DF74      RCALL	_LCD_Comm
+(0134)     LCD_delay(2);   // 2ms 딜레이를 걸어줍니다.
+    00161 E002      LDI	R16,2
+    00162 DF32      RCALL	_LCD_delay
+(0135)     LCD_Comm(0x0e); //Display on /off 를 진행합니다
+    00163 E00E      LDI	R16,0xE
+    00164 DF70      RCALL	_LCD_Comm
+(0136)     LCD_delay(2);
+    00165 E002      LDI	R16,2
+    00166 DF2E      RCALL	_LCD_delay
+(0137)     LCD_Comm(0x01); // LCD를 클리어합니다
+    00167 E001      LDI	R16,1
+    00168 DF6C      RCALL	_LCD_Comm
+(0138)     LCD_delay(30);
+    00169 E10E      LDI	R16,0x1E
+    0016A DF2A      RCALL	_LCD_delay
+(0139)     LCD_Comm(0x06); //cursor entry mode를 세팅합니다
+    0016B E006      LDI	R16,6
+    0016C DF68      RCALL	_LCD_Comm
+(0140)     LCD_delay(2);
+    0016D E002      LDI	R16,2
+    0016E CF26      RJMP	_LCD_delay
+(0141) }
+_main:
+    0016F D016      RCALL	_Init_timer0
+    0016E CF26      RJMP	_LCD_delay
+FILE: C:\20171410\Aphelios_ATMEGA128\main.c
+(0001) #include <iom128v.h>
+(0002) #include "lcd.h"
+(0003) #include "my128.h"
+(0004) 
+(0005) #pragma interrupt_handler timer0_comp_isr : iv_TIM0_COMP //Ÿ�̸� �����÷ο찡 �񱳸� �߶� ������ �ϴ� ���ͷ�Ʈ �Դϴ�.
+(0006) #pragma interrupt_handler ext_int0_isr : iv_EXT_INT0     //ext_int0_isr��� ���ͷ�Ʈ �Լ��� ���ͷ�Ʈ ���Ͷ�� ������ ���ݴϴ�. �켱 ����2
+(0007) #pragma interrupt_handler ext_int1_isr : iv_EXT_INT1     //ext_int1_isr��� ���ͷ�Ʈ �Լ��� ���ͷ�Ʈ ���Ͷ�� ������ ���ݴϴ�. �켱 ����3
+(0008) #pragma interrupt_handler ext_int2_isr : iv_EXT_INT2     //ext_int2_isr��� ���ͷ�Ʈ �Լ��� ���ͷ�Ʈ ���Ͷ�� ������ ���ݴϴ�. �켱 ����4
+(0009) 
+(0010) int cnt = 0;
+(0011) 
+(0012) void Interrupt_init(void); //���ͷ�Ʈ�� �ʱ�ȭ ���ִ� �Լ��Դϴ�.
+(0013) void Init_timer0(void);    // Ÿ�̸�/ī����2�� ����ϱ� ������ �ʱ�ȭ�Լ��� �������ݴϴ�.
+(0014) void ext_int0_isr(void);
+(0015) void ext_int1_isr(void);
+(0016) void ext_int2_isr(void);
+(0017) void timer0_comp_isr(void);
+(0018) 
+(0019) BYTE SPEED_SECOND = 0X30;
+(0020) BYTE SECOND = 0X30;
+(0021) BYTE MINUTE = 0X30;
+(0022) 
+(0023) BYTE TIME[] = "TIME ";
+(0024) BYTE TMP[] = ":";
+(0025) BYTE DOT[] = ".";
+(0026) 
+(0027) void main(void)
+(0028) {
+(0029)     Init_timer0();
+_main:
+    0016F D016      RCALL	_Init_timer0
+(0030)     Interrupt_init(); // ó���� ���ͷ�Ʈ�� �ʱ�ȭ ���ݴϴ�.
+    00170 D00E      RCALL	_Interrupt_init
+(0031)     PortInit();       //LCD�� ���� ��Ʈ�� �����մϴ�.
+    00171 940E 009D CALL	_PortInit
+(0032)     LCD_Init();       //LCD�� ������ �ʱ�ȭ���ݴϴ�.
+    00173 940E 0124 CALL	_LCD_Init
+(0033)     LCD_pos(0, 0); // LCD�� ��ġ�� 0��0�� ��ġ��ŵ�ϴ�.
+    00175 2722      CLR	R18
+    00176 2700      CLR	R16
+    00177 940E 0110 CALL	_LCD_pos
+(0034)     LCD_STR(TIME); // str�� ���ڸ� ǥ�����ݴϴ�
+    00179 E005      LDI	R16,5
+    0017A E011      LDI	R17,1
+    0017B 940E 0100 CALL	_LCD_STR
+(0035)     while (1)
+    0017D CFFF      RJMP	0x017D
+    0017E 9508      RET
+(0036)     {
+(0037)     }
+(0038) }
+(0039) 
+(0040) void Interrupt_init(void) //���ͷ�Ʈ�� �ʱ�ȭ ���ִ� �Լ��Դϴ�.
+(0041) {
+(0042)     EICRA = 0x2A; //0b 0010 1010 : INT0,INT1,INT2 ��Ʈ ������ �մϴ� �ܺ� INT0,INT1,INT2 �㰡 �մϴ�.
+    0017F E28A      LDI	R24,0x2A
+    00180 9380 006A STS	0x6A,R24
+(0043)     EIMSK = 0x09; // INT0,INT1,INT2�� ���ͷ�Ʈ�� �㰡�մϴ�.
+    00182 E089      LDI	R24,0x9
+    00183 BF89      OUT	0x39,R24
+(0044)     SREG |= 0x80; //��ü ���ͷ�Ʈ �㰡�� �Դϴ�.
+    00184 9478      BSET	7
+    00185 9508      RET
+(0045) }
+(0046) 
+(0047) void Init_timer0(void)
+(0048) {
+(0049)     TCCR0 |= (1 << WGM01) | (1 << COM00) | (1 << CS02) | (1 << CS01); //Ÿ�̸�0�� CTC��� ���� ����ġ���� ��� ���ֺ� 256���� �����մϴ�.
+    00186 B783      IN	R24,0x33
+    00187 618E      ORI	R24,0x1E
+    00188 BF83      OUT	0x33,R24
+(0050)     OCR0 = 156;
+    00189 E98C      LDI	R24,0x9C
+    0018A BF81      OUT	0x31,R24
+    0018B 9508      RET
+(0051) }
+    0018C 920A      ST	-Y,R0
+    0018D 921A      ST	-Y,R1
+    0018E 922A      ST	-Y,R2
+    0018F 923A      ST	-Y,R3
+    00190 924A      ST	-Y,R4
+    00191 925A      ST	-Y,R5
+    00192 926A      ST	-Y,R6
+    00193 927A      ST	-Y,R7
+    00194 928A      ST	-Y,R8
+    00195 929A      ST	-Y,R9
+    00196 930A      ST	-Y,R16
+    00197 931A      ST	-Y,R17
+    00198 932A      ST	-Y,R18
+    00199 933A      ST	-Y,R19
+    0019A 938A      ST	-Y,R24
+    0019B 939A      ST	-Y,R25
+    0019C 93AA      ST	-Y,R26
+    0019D 93BA      ST	-Y,R27
+    0019E 93EA      ST	-Y,R30
+    0019F 93FA      ST	-Y,R31
+    001A0 B60F      IN	R0,0x3F
+    001A1 920A      ST	-Y,R0
+    001A2 934A      ST	-Y,R20
+(0052) 
+(0053) void timer0_comp_isr(void)
+(0054) {
+(0055)     cnt++;
+    001A3 9180 0100 LDS	R24,_cnt
+    001A5 9190 0101 LDS	R25,_cnt+1
+    001A7 9601      ADIW	R24,1
+    001A8 9390 0101 STS	_cnt+1,R25
+    001AA 9380 0100 STS	_cnt,R24
+(0056)     if (cnt ==63 ) //0.01�� ����
+    001AC 338F      CPI	R24,0x3F
+    001AD E0E0      LDI	R30,0
+    001AE 079E      CPC	R25,R30
+    001AF F459      BNE	0x01BB
+(0057)     {
+(0058)         SPEED_SECOND++;
+    001B0 9180 0102 LDS	R24,_SPEED_SECOND
+    001B2 5F8F      SUBI	R24,0xFF
+    001B3 9380 0102 STS	_SPEED_SECOND,R24
+(0059)         cnt = 0;
+    001B5 2422      CLR	R2
+    001B6 2433      CLR	R3
+    001B7 9230 0101 STS	_cnt+1,R3
+    001B9 9220 0100 STS	_cnt,R2
+(0060)     }
+(0061)     if (SPEED_SECOND == 0x3A) //���࿡ 1���ڸ����� 0x3A = 0b 0011 1010 �� 10�� �ƽ�Ű�ڵ尡 �Ǹ���
+    001BB 9180 0102 LDS	R24,_SPEED_SECOND
+    001BD 338A      CPI	R24,0x3A
+    001BE F441      BNE	0x01C7
+(0062)     {
+(0063)         SPEED_SECOND = 0x30; //1�� �ڸ������ٰ� 0�� �־��ݴϴ�.
+    001BF E380      LDI	R24,0x30
+    001C0 9380 0102 STS	_SPEED_SECOND,R24
+(0064)         SECOND++;            // �״����� 1�� �ڸ����� 0���� �ʱ�ȭ�ǰ� 10�� �ڸ����� �ϳ� �ö󰩴ϴ�.
+    001C2 9180 0103 LDS	R24,_SECOND
+    001C4 5F8F      SUBI	R24,0xFF
+    001C5 9380 0103 STS	_SECOND,R24
+(0065)     }
+(0066)     if (SECOND == 0x3A) // ���� ���� ������ 10���ڸ����ڰ� 10�� ���� ����Դϴ�.
+    001C7 9180 0103 LDS	R24,_SECOND
+    001C9 338A      CPI	R24,0x3A
+    001CA F441      BNE	0x01D3
+(0067)     {
+(0068)         SECOND = 0x30; //10���ڸ������ٰ� 0�� �־��ݴϴ�.
+    001CB E380      LDI	R24,0x30
+    001CC 9380 0103 STS	_SECOND,R24
+(0069)         MINUTE++;      // �״����� 100���ڸ����� �ϳ� ���������ݴϴ�.
+    001CE 9180 0104 LDS	R24,_MINUTE
+    001D0 5F8F      SUBI	R24,0xFF
+    001D1 9380 0104 STS	_MINUTE,R24
+(0070)     }
+(0071)     if (MINUTE == 0x3A)
+    001D3 9180 0104 LDS	R24,_MINUTE
+    001D5 338A      CPI	R24,0x3A
+    001D6 F409      BNE	0x01D8
+(0072)     {
+(0073)         BYTE SPEED_SECOND = 0X30;
+(0074)         BYTE SECOND = 0X30;
+(0075)         BYTE MINUTE = 0X30;
+    001D7 E340      LDI	R20,0x30
+(0076)     }
+(0077) 
+(0078)     PortInit();             //LCD�� ���� ��Ʈ�� �����մϴ�.
+    001D8 940E 009D CALL	_PortInit
+(0079)     LCD_Init();             //LCD�� ������ �ʱ�ȭ���ݴϴ�.
+    001DA 940E 0124 CALL	_LCD_Init
+(0080)     LCD_pos(0, 0);          // LCD�� ��ġ�� 0��0�� ��ġ��ŵ�ϴ�.
+    001DC 2722      CLR	R18
+    001DD 2700      CLR	R16
+    001DE 940E 0110 CALL	_LCD_pos
+(0081)     LCD_STR(TIME);          // str�� ���ڸ� ǥ�����ݴϴ�
+    001E0 E005      LDI	R16,5
+    001E1 E011      LDI	R17,1
+    001E2 940E 0100 CALL	_LCD_STR
+(0082)     LCD_pos(0, 6);          //0�� 0������ ����Ѵ�
+    001E4 E026      LDI	R18,6
+    001E5 2700      CLR	R16
+    001E6 940E 0110 CALL	_LCD_pos
+(0083)     LCD_Data(MINUTE);       //�������� LCD�� ������ݴϴ�.
+    001E8 9100 0104 LDS	R16,_MINUTE
+    001EA 940E 00B4 CALL	_LCD_Data
+(0084)     LCD_STR(TMP);           //�������� LCD�� ������ݴϴ�.
+    001EC E00B      LDI	R16,0xB
+    001ED E011      LDI	R17,1
+    001EE 940E 0100 CALL	_LCD_STR
+(0085)     LCD_Data(SECOND);       //�������� LCD�� ������ݴϴ�.
+    001F0 9100 0103 LDS	R16,_SECOND
+    001F2 940E 00B4 CALL	_LCD_Data
+(0086)     LCD_STR(DOT);           //�������� LCD�� ������ݴϴ�.
+    001F4 E00D      LDI	R16,0xD
+    001F5 E011      LDI	R17,1
+    001F6 940E 0100 CALL	_LCD_STR
+(0087)     LCD_Data(SPEED_SECOND); //�������� LCD�� ������ݴϴ�.
+    001F8 9100 0102 LDS	R16,_SPEED_SECOND
+    001FA 940E 00B4 CALL	_LCD_Data
+    001FC 9149      LD	R20,Y+
+    001FD 9009      LD	R0,Y+
+    001FE BE0F      OUT	0x3F,R0
+    001FF 91F9      LD	R31,Y+
+    00200 91E9      LD	R30,Y+
+    00201 91B9      LD	R27,Y+
+    00202 91A9      LD	R26,Y+
+    00203 9199      LD	R25,Y+
+    00204 9189      LD	R24,Y+
+    00205 9139      LD	R19,Y+
+    00206 9129      LD	R18,Y+
+    00207 9119      LD	R17,Y+
+    00208 9109      LD	R16,Y+
+    00209 9099      LD	R9,Y+
+    0020A 9089      LD	R8,Y+
+    0020B 9079      LD	R7,Y+
+    0020C 9069      LD	R6,Y+
+    0020D 9059      LD	R5,Y+
+    0020E 9049      LD	R4,Y+
+    0020F 9039      LD	R3,Y+
+    00210 9029      LD	R2,Y+
+    00211 9019      LD	R1,Y+
+    00212 9009      LD	R0,Y+
+    00213 9518      RETI
+(0088) }
+    00214 920A      ST	-Y,R0
+    00215 921A      ST	-Y,R1
+    00216 922A      ST	-Y,R2
+    00217 923A      ST	-Y,R3
+    00218 924A      ST	-Y,R4
+    00219 925A      ST	-Y,R5
+    0021A 926A      ST	-Y,R6
+    0021B 927A      ST	-Y,R7
+    0021C 928A      ST	-Y,R8
+    0021D 929A      ST	-Y,R9
+    0021E 930A      ST	-Y,R16
+    0021F 931A      ST	-Y,R17
+    00220 932A      ST	-Y,R18
+    00221 933A      ST	-Y,R19
+    00222 938A      ST	-Y,R24
+    00223 939A      ST	-Y,R25
+    00224 93AA      ST	-Y,R26
+    00225 93BA      ST	-Y,R27
+    00226 93EA      ST	-Y,R30
+    00227 93FA      ST	-Y,R31
+    00228 B60F      IN	R0,0x3F
+    00229 920A      ST	-Y,R0
+(0089) 
+(0090) void ext_int0_isr(void) // START 1/100�� ������ �ð��� ����� �ϸ鼭 �����ϸ� ����� LCD�� ���������� ������Ʈ�Ѵ�
+(0091) {
+(0092)     PortInit();             //LCD�� ���� ��Ʈ�� �����մϴ�.
+    0022A 940E 009D CALL	_PortInit
+(0093)     LCD_Init();             //LCD�� ������ �ʱ�ȭ���ݴϴ�.
+    0022C 940E 0124 CALL	_LCD_Init
+(0094)     LCD_pos(0, 0);          // LCD�� ��ġ�� 0��0�� ��ġ��ŵ�ϴ�.
+    0022E 2722      CLR	R18
+    0022F 2700      CLR	R16
+    00230 940E 0110 CALL	_LCD_pos
+(0095)     LCD_STR(TIME);          // str�� ���ڸ� ǥ�����ݴϴ�
+    00232 E005      LDI	R16,5
+    00233 E011      LDI	R17,1
+    00234 940E 0100 CALL	_LCD_STR
+(0096)     LCD_pos(0, 6);          //0�� 0������ ����Ѵ�
+    00236 E026      LDI	R18,6
+    00237 2700      CLR	R16
+    00238 940E 0110 CALL	_LCD_pos
+(0097)     LCD_Data(MINUTE);       //�������� LCD�� ������ݴϴ�.
+    0023A 9100 0104 LDS	R16,_MINUTE
+    0023C 940E 00B4 CALL	_LCD_Data
+(0098)     LCD_STR(TMP);           //�������� LCD�� ������ݴϴ�.
+    0023E E00B      LDI	R16,0xB
+    0023F E011      LDI	R17,1
+    00240 940E 0100 CALL	_LCD_STR
+(0099)     LCD_Data(SECOND);       //�������� LCD�� ������ݴϴ�.
+    00242 9100 0103 LDS	R16,_SECOND
+    00244 940E 00B4 CALL	_LCD_Data
+(0100)     LCD_STR(DOT);           //�������� LCD�� ������ݴϴ�.
+    00246 E00D      LDI	R16,0xD
+    00247 E011      LDI	R17,1
+    00248 940E 0100 CALL	_LCD_STR
+(0101)     LCD_Data(SPEED_SECOND); //�������� LCD�� ������ݴϴ�.
+    0024A 9100 0102 LDS	R16,_SPEED_SECOND
+    0024C 940E 00B4 CALL	_LCD_Data
+    0024E 9009      LD	R0,Y+
+    0024F BE0F      OUT	0x3F,R0
+    00250 91F9      LD	R31,Y+
+    00251 91E9      LD	R30,Y+
+    00252 91B9      LD	R27,Y+
+    00253 91A9      LD	R26,Y+
+    00254 9199      LD	R25,Y+
+    00255 9189      LD	R24,Y+
+    00256 9139      LD	R19,Y+
+    00257 9129      LD	R18,Y+
+    00258 9119      LD	R17,Y+
+    00259 9109      LD	R16,Y+
+    0025A 9099      LD	R9,Y+
+    0025B 9089      LD	R8,Y+
+    0025C 9079      LD	R7,Y+
+    0025D 9069      LD	R6,Y+
+    0025E 9059      LD	R5,Y+
+    0025F 9049      LD	R4,Y+
+    00260 9039      LD	R3,Y+
+    00261 9029      LD	R2,Y+
+    00262 9019      LD	R1,Y+
+    00263 9009      LD	R0,Y+
+    00264 9518      RETI
+(0102) }
+    00265 920A      ST	-Y,R0
+    00266 921A      ST	-Y,R1
+    00267 922A      ST	-Y,R2
+    00268 923A      ST	-Y,R3
+    00269 924A      ST	-Y,R4
+    0026A 925A      ST	-Y,R5
+    0026B 926A      ST	-Y,R6
+    0026C 927A      ST	-Y,R7
+    0026D 928A      ST	-Y,R8
+    0026E 929A      ST	-Y,R9
+    0026F 930A      ST	-Y,R16
+    00270 931A      ST	-Y,R17
+    00271 932A      ST	-Y,R18
+    00272 933A      ST	-Y,R19
+    00273 938A      ST	-Y,R24
+    00274 939A      ST	-Y,R25
+    00275 93AA      ST	-Y,R26
+    00276 93BA      ST	-Y,R27
+    00277 93EA      ST	-Y,R30
+    00278 93FA      ST	-Y,R31
+    00279 B60F      IN	R0,0x3F
+    0027A 920A      ST	-Y,R0
+(0103) 
+(0104) void ext_int1_isr(void)
+(0105) {
+(0106)     cnt = 0;
+    0027B 2422      CLR	R2
+    0027C 2433      CLR	R3
+    0027D 9230 0101 STS	_cnt+1,R3
+    0027F 9220 0100 STS	_cnt,R2
+(0107)     PortInit();             //LCD�� ���� ��Ʈ�� �����մϴ�.
+    00281 940E 009D CALL	_PortInit
+(0108)     LCD_Init();             //LCD�� ������ �ʱ�ȭ���ݴϴ�.
+    00283 940E 0124 CALL	_LCD_Init
+(0109)     LCD_pos(0, 0);          // LCD�� ��ġ�� 0��0�� ��ġ��ŵ�ϴ�.
+    00285 2722      CLR	R18
+    00286 2700      CLR	R16
+    00287 940E 0110 CALL	_LCD_pos
+(0110)     LCD_STR(TIME);          // str�� ���ڸ� ǥ�����ݴϴ�
+    00289 E005      LDI	R16,5
+    0028A E011      LDI	R17,1
+    0028B 940E 0100 CALL	_LCD_STR
+(0111)     LCD_pos(0, 6);          //0�� 0������ ����Ѵ�
+    0028D E026      LDI	R18,6
+    0028E 2700      CLR	R16
+    0028F 940E 0110 CALL	_LCD_pos
+(0112)     LCD_Data(MINUTE);       //�������� LCD�� ������ݴϴ�.
+    00291 9100 0104 LDS	R16,_MINUTE
+    00293 940E 00B4 CALL	_LCD_Data
+(0113)     LCD_STR(TMP);           //�������� LCD�� ������ݴϴ�.
+    00295 E00B      LDI	R16,0xB
+    00296 E011      LDI	R17,1
+    00297 940E 0100 CALL	_LCD_STR
+(0114)     LCD_Data(SECOND);       //�������� LCD�� ������ݴϴ�.
+    00299 9100 0103 LDS	R16,_SECOND
+    0029B 940E 00B4 CALL	_LCD_Data
+(0115)     LCD_STR(DOT);           //�������� LCD�� ������ݴϴ�.
+    0029D E00D      LDI	R16,0xD
+    0029E E011      LDI	R17,1
+    0029F 940E 0100 CALL	_LCD_STR
+(0116)     LCD_Data(SPEED_SECOND); //�������� LCD�� ������ݴϴ�.
+    002A1 9100 0102 LDS	R16,_SPEED_SECOND
+    002A3 940E 00B4 CALL	_LCD_Data
+    002A5 9009      LD	R0,Y+
+    002A6 BE0F      OUT	0x3F,R0
+    002A7 91F9      LD	R31,Y+
+    002A8 91E9      LD	R30,Y+
+    002A9 91B9      LD	R27,Y+
+    002AA 91A9      LD	R26,Y+
+    002AB 9199      LD	R25,Y+
+    002AC 9189      LD	R24,Y+
+    002AD 9139      LD	R19,Y+
+    002AE 9129      LD	R18,Y+
+    002AF 9119      LD	R17,Y+
+    002B0 9109      LD	R16,Y+
+    002B1 9099      LD	R9,Y+
+    002B2 9089      LD	R8,Y+
+    002B3 9079      LD	R7,Y+
+    002B4 9069      LD	R6,Y+
+    002B5 9059      LD	R5,Y+
+    002B6 9049      LD	R4,Y+
+    002B7 9039      LD	R3,Y+
+    002B8 9029      LD	R2,Y+
+    002B9 9019      LD	R1,Y+
+    002BA 9009      LD	R0,Y+
+    002BB 9518      RETI
+(0117) }
+    002BC 920A      ST	-Y,R0
+    002BD 921A      ST	-Y,R1
+    002BE 922A      ST	-Y,R2
+    002BF 923A      ST	-Y,R3
+    002C0 924A      ST	-Y,R4
+    002C1 925A      ST	-Y,R5
+    002C2 926A      ST	-Y,R6
+    002C3 927A      ST	-Y,R7
+    002C4 928A      ST	-Y,R8
+    002C5 929A      ST	-Y,R9
+    002C6 930A      ST	-Y,R16
+    002C7 931A      ST	-Y,R17
+    002C8 932A      ST	-Y,R18
+    002C9 933A      ST	-Y,R19
+    002CA 938A      ST	-Y,R24
+    002CB 939A      ST	-Y,R25
+    002CC 93AA      ST	-Y,R26
+    002CD 93BA      ST	-Y,R27
+    002CE 93EA      ST	-Y,R30
+    002CF 93FA      ST	-Y,R31
+    002D0 B60F      IN	R0,0x3F
+    002D1 920A      ST	-Y,R0
+    002D2 940E 0354 CALL	push_xgsetF00C
+(0118) 
+(0119) void ext_int2_isr(void)
+(0120) {
+(0121)     LCD_Init();    //LCD�� �ʱ�ȭ �����ݴϴ�.
+    002D4 940E 0124 CALL	_LCD_Init
+(0122)     LCD_pos(0, 0); //0�� 0������ ����Ѵ�
+    002D6 2722      CLR	R18
+    002D7 2700      CLR	R16
+    002D8 940E 0110 CALL	_LCD_pos
+(0123)     LCD_STR(TIME); //�������� LCD�� ������ݴϴ�.
+    002DA E005      LDI	R16,5
+    002DB E011      LDI	R17,1
+    002DC 940E 0100 CALL	_LCD_STR
+(0124)     BYTE SPEED_SECOND = 0X30;
+    002DE E340      LDI	R20,0x30
+(0125)     BYTE SECOND = 0X30;
+    002DF E360      LDI	R22,0x30
+(0126)     BYTE MINUTE = 0X30;
+    002E0 E380      LDI	R24,0x30
+    002E1 2EA8      MOV	R10,R24
+(0127)     LCD_Data(MINUTE);       //�������� LCD�� ������ݴϴ�.
+    002E2 2F08      MOV	R16,R24
+    002E3 940E 00B4 CALL	_LCD_Data
+(0128)     LCD_STR(TMP);           //�������� LCD�� ������ݴϴ�.
+    002E5 E00B      LDI	R16,0xB
+    002E6 E011      LDI	R17,1
+    002E7 940E 0100 CALL	_LCD_STR
+(0129)     LCD_Data(SECOND);       //�������� LCD�� ������ݴϴ�.
+    002E9 2F06      MOV	R16,R22
+    002EA 940E 00B4 CALL	_LCD_Data
+(0130)     LCD_STR(DOT);           //�������� LCD�� ������ݴϴ�.
+    002EC E00D      LDI	R16,0xD
+    002ED E011      LDI	R17,1
+    002EE 940E 0100 CALL	_LCD_STR
+(0131)     LCD_Data(SPEED_SECOND); //�������� LCD�� ������ݴϴ�.
+    002F0 2F04      MOV	R16,R20
+    002F1 940E 00B4 CALL	_LCD_Data
+(0132) }
+    002F3 940E 035B CALL	pop_xgsetF00C
+    002F5 9009      LD	R0,Y+
+    002F6 BE0F      OUT	0x3F,R0
+    002F7 91F9      LD	R31,Y+
+    002F8 91E9      LD	R30,Y+
+    002F9 91B9      LD	R27,Y+
+    002FA 91A9      LD	R26,Y+
+    002FB 9199      LD	R25,Y+
+    002FC 9189      LD	R24,Y+
+    002FD 9139      LD	R19,Y+
+    002FE 9129      LD	R18,Y+
+    002FF 9119      LD	R17,Y+
+    00300 9109      LD	R16,Y+
+    00301 9099      LD	R9,Y+
+    00302 9089      LD	R8,Y+
+    00303 9079      LD	R7,Y+
+    00304 9069      LD	R6,Y+
+    00305 9059      LD	R5,Y+
+    00306 9049      LD	R4,Y+
+    00307 9039      LD	R3,Y+
+    00308 9029      LD	R2,Y+
+    00309 9019      LD	R1,Y+
+    0030A 9009      LD	R0,Y+
+    0030B 9518      RETI
+    0030C 940E 034A CALL	push_xgsetF000
+    0030D 034A      MULSU	R20,R26
+FILE: C:\20171410\Aphelios_ATMEGA128\my128.c
+(0001) #include "my128.h"
+(0002) 
+(0003) void delay_ms(unsigned int m)   //10^-3  500이면 0.5초
+(0004) {
+(0005)     unsigned int i,j;
+(0006)     for(i=0;i<m;i++)
+    0030E 2744      CLR	R20
+    0030F 2755      CLR	R21
+    00310 C00C      RJMP	0x031D
+(0007)     {
+(0008)         for(j=0;j<2130;j++);
+    00311 2766      CLR	R22
+    00312 2777      CLR	R23
+    00313 C002      RJMP	0x0316
+    00314 5F6F      SUBI	R22,0xFF
+    00315 4F7F      SBCI	R23,0xFF
+    00316 E582      LDI	R24,0x52
+    00317 E098      LDI	R25,0x8
+    00318 1768      CP	R22,R24
+    00319 0779      CPC	R23,R25
+    0031A F3C8      BCS	0x0314
+    0031B 5F4F      SUBI	R20,0xFF
+    0031C 4F5F      SBCI	R21,0xFF
+    0031D 1740      CP	R20,R16
+    0031E 0751      CPC	R21,R17
+    0031F F388      BCS	0x0311
+    00320 940C 034F JMP	pop_xgsetF000
+    00322 9508      RET
+(0009)     }
+(0010) }
+_delay_us:
+  i                    --> R20
+  j                    --> R22
+  u                    --> R16
+    00323 940E 034A CALL	push_xgsetF000
+(0011) 
+(0012) void delay_us(unsigned int u)   //10^6   
+(0013) {
+(0014)     unsigned int i,j;
+(0015) 
+(0016)     for(i=0;i<u;i++)
+    00325 2744      CLR	R20
+    00326 2755      CLR	R21
+    00327 C00C      RJMP	0x0334
+(0017)     {
+(0018)         for(j=0;j<2;j++);
+    00328 2766      CLR	R22
+    00329 2777      CLR	R23
+    0032A C002      RJMP	0x032D
+    0032B 5F6F      SUBI	R22,0xFF
+    0032C 4F7F      SBCI	R23,0xFF
+    0032D E082      LDI	R24,2
+    0032E E090      LDI	R25,0
+    0032F 1768      CP	R22,R24
+    00330 0779      CPC	R23,R25
+    00331 F3C8      BCS	0x032B
+    00332 5F4F      SUBI	R20,0xFF
+    00333 4F5F      SBCI	R21,0xFF
+    00334 1740      CP	R20,R16
+    00335 0751      CPC	R21,R17
+    00336 F388      BCS	0x0328
+    00337 940C 034F JMP	pop_xgsetF000
+    00339 9508      RET
+(0019)     }
+(0020) }
+<LIBRARY>|empy16s:
+    0033A 920A      ST	-Y,R0
+    0033B 921A      ST	-Y,R1
+    0033C 938A      ST	-Y,R24
+    0033D 939A      ST	-Y,R25
+    0033E 9F02      MUL	R16,R18
+    0033F 01C0      MOVW	R24,R0
+    00340 9F12      MUL	R17,R18
+    00341 0D90      ADD	R25,R0
+    00342 9F03      MUL	R16,R19
+    00343 0D90      ADD	R25,R0
+    00344 018C      MOVW	R16,R24
+    00345 9199      LD	R25,Y+
+    00346 9189      LD	R24,Y+
+    00347 9019      LD	R1,Y+
+    00348 9009      LD	R0,Y+
+    00349 9508      RET

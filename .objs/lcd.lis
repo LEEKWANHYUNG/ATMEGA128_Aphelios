@@ -1,0 +1,407 @@
+                        .module lcd.c
+                        .area text(rom, con, rel)
+ 0000                   .dbfile C:\20171410\Aphelios_ATMEGA128\lcd.c
+ 0000                   .dbfunc e LCD_delay _LCD_delay#Fvh fV 5 10988044
+ 0000           ;             ms -> R10
+                        .even
+ 0000           _LCD_delay#Fvh::
+ 0000 AA92              st -y,R10
+ 0002 A02E              mov R10,R16
+ 0004                   .dbblock 6
+ 0004                   .dbline 7
+ 0004 0A2D              mov R16,R10
+ 0006 1127              clr R17
+ 0008 0E940000          xcall _delay_ms#Fvj
+ 000C                   .dbblkend 8
+ 000C           L1:
+ 000C A990              ld R10,y+
+ 000E 0895              ret
+ 0010                   .dbfuncend
+ 0010                   .dbsym r ms 10 c
+ 0010                   .dbstacksize -3
+ 0010                   .dbfunc e PortInit _PortInit#Fvv fV 11 10988044
+                        .even
+ 0010           _PortInit#Fvv::
+ 0010                   .dbblock 12
+ 0010                   .dbline 13
+ 0010 8FEF              ldi R24,255
+ 0012 8ABB              out 0x1a,R24
+ 0014                   .dbline 14
+ 0014 8FE0              ldi R24,15
+ 0016 80936400          sts 100,R24
+ 001A                   .dbblkend 15
+ 001A           L2:
+ 001A 0895              ret
+ 001C                   .dbfuncend
+ 001C                   .dbstacksize -2
+ 001C                   .dbfunc e LCD_Shift _LCD_Shift#Fvc fV 17 10988044
+ 001C           ;              p -> R20
+                        .even
+ 001C           _LCD_Shift#Fvc::
+ 001C 4A93              st -y,R20
+ 001E 402F              mov R20,R16
+ 0020                   .dbblock 18
+ 0020                   .dbline 19
+ 0020 4130              cpi R20,1
+ 0022 29F4              brne L4
+ 0024           X0:
+ 0024                   .dbline 21
+ 0024 0CE1              ldi R16,28
+ 0026 2CD0              xcall _LCD_Comm#Fvh
+ 0028                   .dbline 22
+ 0028 01E0              ldi R16,1
+ 002A EADF              xcall _LCD_delay#Fvh
+ 002C                   .dbline 23
+ 002C 06C0              xjmp L5
+ 002E           L4:
+ 002E                   .dbline 24
+ 002E 4423              tst R20
+ 0030 21F4              brne L6
+ 0032           X1:
+ 0032                   .dbline 26
+ 0032 08E1              ldi R16,24
+ 0034 25D0              xcall _LCD_Comm#Fvh
+ 0036                   .dbline 27
+ 0036 01E0              ldi R16,1
+ 0038 E3DF              xcall _LCD_delay#Fvh
+ 003A           L6:
+ 003A           L5:
+ 003A                   .dbblkend 29
+ 003A           L3:
+ 003A 4991              ld R20,y+
+ 003C 0895              ret
+ 003E                   .dbfuncend
+ 003E                   .dbsym r p 20 c
+ 003E                   .dbstacksize -3
+ 003E                   .dbfunc e LCD_Data _LCD_Data#Fvh fV 31 10988044
+ 003E           ;             ch -> R10
+                        .even
+ 003E           _LCD_Data#Fvh::
+ 003E AA92              st -y,R10
+ 0040 A02E              mov R10,R16
+ 0042                   .dbblock 32
+ 0042                   .dbline 33
+ 0042 80916500          lds R24,101
+ 0046 8460              ori R24,4
+ 0048 80936500          sts 101,R24
+ 004C                   .dbline 34
+ 004C 80916500          lds R24,101
+ 0050 8D7F              andi R24,253
+ 0052 80936500          sts 101,R24
+ 0056                   .dbline 35
+ 0056 80916500          lds R24,101
+ 005A 8160              ori R24,1
+ 005C 80936500          sts 101,R24
+ 0060                   .dbline 37
+ 0060 02E3              ldi R16,50
+ 0062 10E0              ldi R17,0
+ 0064 0E940000          xcall _delay_us#Fvj
+ 0068                   .dbline 38
+ 0068 ABBA              out 0x1b,R10
+ 006A                   .dbline 39
+ 006A 02E3              ldi R16,50
+ 006C 10E0              ldi R17,0
+ 006E 0E940000          xcall _delay_us#Fvj
+ 0072                   .dbline 40
+ 0072 80916500          lds R24,101
+ 0076 8E7F              andi R24,254
+ 0078 80936500          sts 101,R24
+ 007C                   .dbblkend 41
+ 007C           L8:
+ 007C A990              ld R10,y+
+ 007E 0895              ret
+ 0080                   .dbfuncend
+ 0080                   .dbsym r ch 10 c
+ 0080                   .dbstacksize -3
+ 0080                   .dbfunc e LCD_Comm _LCD_Comm#Fvh fV 43 10988044
+ 0080           ;             ch -> R10
+                        .even
+ 0080           _LCD_Comm#Fvh::
+ 0080 AA92              st -y,R10
+ 0082 A02E              mov R10,R16
+ 0084                   .dbblock 44
+ 0084                   .dbline 45
+ 0084 80916500          lds R24,101
+ 0088 8B7F              andi R24,251
+ 008A 80936500          sts 101,R24
+ 008E                   .dbline 46
+ 008E 80916500          lds R24,101
+ 0092 8D7F              andi R24,253
+ 0094 80936500          sts 101,R24
+ 0098                   .dbline 47
+ 0098 80916500          lds R24,101
+ 009C 8160              ori R24,1
+ 009E 80936500          sts 101,R24
+ 00A2                   .dbline 49
+ 00A2 02E3              ldi R16,50
+ 00A4 10E0              ldi R17,0
+ 00A6 0E940000          xcall _delay_us#Fvj
+ 00AA                   .dbline 50
+ 00AA ABBA              out 0x1b,R10
+ 00AC                   .dbline 51
+ 00AC 02E3              ldi R16,50
+ 00AE 10E0              ldi R17,0
+ 00B0 0E940000          xcall _delay_us#Fvj
+ 00B4                   .dbline 52
+ 00B4 80916500          lds R24,101
+ 00B8 8E7F              andi R24,254
+ 00BA 80936500          sts 101,R24
+ 00BE                   .dbblkend 53
+ 00BE           L9:
+ 00BE A990              ld R10,y+
+ 00C0 0895              ret
+ 00C2                   .dbfuncend
+ 00C2                   .dbsym r ch 10 c
+ 00C2                   .dbstacksize -3
+ 00C2                   .dbfunc e LCD_CHAR _LCD_CHAR#Fvh fV 55 10988044
+ 00C2           ;              c -> R10
+                        .even
+ 00C2           _LCD_CHAR#Fvh::
+ 00C2 AA92              st -y,R10
+ 00C4 A02E              mov R10,R16
+ 00C6                   .dbblock 56
+ 00C6                   .dbline 57
+ 00C6 0A2D              mov R16,R10
+ 00C8 BADF              xcall _LCD_Data#Fvh
+ 00CA                   .dbline 58
+ 00CA 01E0              ldi R16,1
+ 00CC 10E0              ldi R17,0
+ 00CE 0E940000          xcall _delay_ms#Fvj
+ 00D2                   .dbblkend 59
+ 00D2           L10:
+ 00D2 A990              ld R10,y+
+ 00D4 0895              ret
+ 00D6                   .dbfuncend
+ 00D6                   .dbsym r c 10 c
+ 00D6                   .dbstacksize -3
+ 00D6                   .dbfunc e LCD_STR _LCD_STR#FvPh fV 61 10988044
+ 00D6           ;            str -> R20,R21
+                        .even
+ 00D6           _LCD_STR#FvPh::
+ 00D6 4A93              st -y,R20
+ 00D8 5A93              st -y,R21
+ 00DA A801              movw R20,R16
+ 00DC                   .dbblock 62
+ 00DC                   .dbline 62
+ 00DC 05C0              xjmp L13
+ 00DE           L12:
+ 00DE                   .dbline 65
+ 00DE FA01              movw R30,R20
+ 00E0 0081              ldd R16,z+0
+ 00E2 EFDF              xcall _LCD_CHAR#Fvh
+ 00E4                   .dbline 66
+ 00E4 4F5F              subi R20,255  ; offset = 1
+ 00E6 5F4F              sbci R21,255
+ 00E8           L13:
+ 00E8                   .dbline 63
+ 00E8 FA01              movw R30,R20
+ 00EA 2080              ldd R2,z+0
+ 00EC 2220              tst R2
+ 00EE B9F7              brne L12
+ 00F0           X2:
+ 00F0                   .dbblkend 68
+ 00F0           L11:
+ 00F0 5991              ld R21,y+
+ 00F2 4991              ld R20,y+
+ 00F4 0895              ret
+ 00F6                   .dbfuncend
+ 00F6                   .dbsym r str 20 pc
+ 00F6                   .dbstacksize -2
+ 00F6                   .dbfunc e LCD_pos _LCD_pos#Fvhh fV 70 10988044
+ 00F6           ;            col -> R10
+ 00F6           ;            row -> R12
+                        .even
+ 00F6           _LCD_pos#Fvhh::
+ 00F6 AA92              st -y,R10
+ 00F8 CA92              st -y,R12
+ 00FA A22E              mov R10,R18
+ 00FC C02E              mov R12,R16
+ 00FE                   .dbblock 71
+ 00FE                   .dbline 72
+ 00FE 2C2D              mov R18,R12
+ 0100 3327              clr R19
+ 0102 00E4              ldi R16,64
+ 0104 10E0              ldi R17,0
+ 0106 0E940000          xcall empy16s
+ 010A 0A0D              add R16,R10
+ 010C 0068              ori R16,128
+ 010E B8DF              xcall _LCD_Comm#Fvh
+ 0110                   .dbblkend 73
+ 0110           L15:
+ 0110 C990              ld R12,y+
+ 0112 A990              ld R10,y+
+ 0114 0895              ret
+ 0116                   .dbfuncend
+ 0116                   .dbsym r col 10 c
+ 0116                   .dbsym r row 12 c
+ 0116                   .dbstacksize -4
+ 0116                   .dbfunc e LCD_Clear _LCD_Clear#Fvv fV 75 10988044
+                        .even
+ 0116           _LCD_Clear#Fvv::
+ 0116                   .dbblock 76
+ 0116                   .dbline 77
+ 0116 01E0              ldi R16,1
+ 0118 B3DF              xcall _LCD_Comm#Fvh
+ 011A                   .dbline 78
+ 011A 02E0              ldi R16,2
+ 011C                   .dbblkend 79
+ 011C           L16:
+ 011C 71CF              xjmp _LCD_delay#Fvh
+ 011E                   .dbfuncend
+ 011E                   .dbstacksize -2
+ 011E                   .dbfunc e LCD_Init _LCD_Init#Fvv fV 81 10988044
+                        .even
+ 011E           _LCD_Init#Fvv::
+ 011E                   .dbblock 82
+ 011E                   .dbline 83
+ 011E 08E3              ldi R16,56
+ 0120 AFDF              xcall _LCD_Comm#Fvh
+ 0122                   .dbline 84
+ 0122 02E0              ldi R16,2
+ 0124 6DDF              xcall _LCD_delay#Fvh
+ 0126                   .dbline 85
+ 0126 08E3              ldi R16,56
+ 0128 ABDF              xcall _LCD_Comm#Fvh
+ 012A                   .dbline 86
+ 012A 02E0              ldi R16,2
+ 012C 69DF              xcall _LCD_delay#Fvh
+ 012E                   .dbline 87
+ 012E 08E3              ldi R16,56
+ 0130 A7DF              xcall _LCD_Comm#Fvh
+ 0132                   .dbline 88
+ 0132 02E0              ldi R16,2
+ 0134 65DF              xcall _LCD_delay#Fvh
+ 0136                   .dbline 90
+ 0136 0EE0              ldi R16,14
+ 0138 A3DF              xcall _LCD_Comm#Fvh
+ 013A                   .dbline 91
+ 013A 02E0              ldi R16,2
+ 013C 61DF              xcall _LCD_delay#Fvh
+ 013E                   .dbline 92
+ 013E 06E0              ldi R16,6
+ 0140 9FDF              xcall _LCD_Comm#Fvh
+ 0142                   .dbline 93
+ 0142 02E0              ldi R16,2
+ 0144 5DDF              xcall _LCD_delay#Fvh
+ 0146                   .dbblkend 95
+ 0146           L17:
+ 0146 E7CF              xjmp _LCD_Clear#Fvv
+ 0148                   .dbfuncend
+ 0148                   .dbstacksize -2
+ 0148                   .dbfunc e Cursor_Home _Cursor_Home#Fvv fV 97 10988044
+                        .even
+ 0148           _Cursor_Home#Fvv::
+ 0148                   .dbblock 98
+ 0148                   .dbline 99
+ 0148 02E0              ldi R16,2
+ 014A 9ADF              xcall _LCD_Comm#Fvh
+ 014C                   .dbline 100
+ 014C 02E0              ldi R16,2
+ 014E                   .dbblkend 101
+ 014E           L18:
+ 014E 58CF              xjmp _LCD_delay#Fvh
+ 0150                   .dbfuncend
+ 0150                   .dbstacksize -2
+ 0150                   .dbfunc e Cursor_shift _Cursor_shift#Fvh fV 103 10988044
+ 0150           ;              p -> R20
+                        .even
+ 0150           _Cursor_shift#Fvh::
+ 0150 4A93              st -y,R20
+ 0152 402F              mov R20,R16
+ 0154                   .dbblock 104
+ 0154                   .dbline 105
+ 0154 4130              cpi R20,1
+ 0156 29F4              brne L20
+ 0158           X3:
+ 0158                   .dbline 107
+ 0158 04E1              ldi R16,20
+ 015A 92DF              xcall _LCD_Comm#Fvh
+ 015C                   .dbline 108
+ 015C 01E0              ldi R16,1
+ 015E 50DF              xcall _LCD_delay#Fvh
+ 0160                   .dbline 109
+ 0160 06C0              xjmp L21
+ 0162           L20:
+ 0162                   .dbline 110
+ 0162 4423              tst R20
+ 0164 21F4              brne L22
+ 0166           X4:
+ 0166                   .dbline 112
+ 0166 00E1              ldi R16,16
+ 0168 8BDF              xcall _LCD_Comm#Fvh
+ 016A                   .dbline 113
+ 016A 01E0              ldi R16,1
+ 016C 49DF              xcall _LCD_delay#Fvh
+ 016E           L22:
+ 016E           L21:
+ 016E                   .dbblkend 115
+ 016E           L19:
+ 016E 4991              ld R20,y+
+ 0170 0895              ret
+ 0172                   .dbfuncend
+ 0172                   .dbsym r p 20 c
+ 0172                   .dbstacksize -3
+ 0172                   .dbfunc e LCD_OnOFF _LCD_OnOFF#Fvv fV 118 10988044
+                        .even
+ 0172           _LCD_OnOFF#Fvv::
+ 0172                   .dbblock 119
+ 0172                   .dbline 120
+ 0172 0EE0              ldi R16,14
+ 0174 85DF              xcall _LCD_Comm#Fvh
+ 0176                   .dbline 121
+ 0176 02E0              ldi R16,2
+ 0178                   .dbblkend 122
+ 0178           L24:
+ 0178 43CF              xjmp _LCD_delay#Fvh
+ 017A                   .dbfuncend
+ 017A                   .dbstacksize -2
+ 017A                   .dbfunc e Init_Lcd _Init_Lcd#Fvv fV 125 10988044
+                        .even
+ 017A           _Init_Lcd#Fvv::
+ 017A                   .dbblock 126
+ 017A                   .dbline 127
+ 017A 8FEF              ldi R24,255
+ 017C 8ABB              out 0x1a,R24
+ 017E                   .dbline 128
+ 017E 8FE0              ldi R24,15
+ 0180 80936400          sts 100,R24
+ 0184                   .dbline 129
+ 0184 08E3              ldi R16,56
+ 0186 7CDF              xcall _LCD_Comm#Fvh
+ 0188                   .dbline 130
+ 0188 02E0              ldi R16,2
+ 018A 3ADF              xcall _LCD_delay#Fvh
+ 018C                   .dbline 131
+ 018C 08E3              ldi R16,56
+ 018E 78DF              xcall _LCD_Comm#Fvh
+ 0190                   .dbline 132
+ 0190 02E0              ldi R16,2
+ 0192 36DF              xcall _LCD_delay#Fvh
+ 0194                   .dbline 133
+ 0194 08E3              ldi R16,56
+ 0196 74DF              xcall _LCD_Comm#Fvh
+ 0198                   .dbline 134
+ 0198 02E0              ldi R16,2
+ 019A 32DF              xcall _LCD_delay#Fvh
+ 019C                   .dbline 135
+ 019C 0EE0              ldi R16,14
+ 019E 70DF              xcall _LCD_Comm#Fvh
+ 01A0                   .dbline 136
+ 01A0 02E0              ldi R16,2
+ 01A2 2EDF              xcall _LCD_delay#Fvh
+ 01A4                   .dbline 137
+ 01A4 01E0              ldi R16,1
+ 01A6 6CDF              xcall _LCD_Comm#Fvh
+ 01A8                   .dbline 138
+ 01A8 0EE1              ldi R16,30
+ 01AA 2ADF              xcall _LCD_delay#Fvh
+ 01AC                   .dbline 139
+ 01AC 06E0              ldi R16,6
+ 01AE 68DF              xcall _LCD_Comm#Fvh
+ 01B0                   .dbline 140
+ 01B0 02E0              ldi R16,2
+ 01B2                   .dbblkend 141
+ 01B2           L25:
+ 01B2 26CF              xjmp _LCD_delay#Fvh
+ 01B4                   .dbfuncend
+ 01B4                   .dbstacksize -2
